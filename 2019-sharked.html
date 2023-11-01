@@ -1,0 +1,200 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+
+        <style>
+            body, html {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                padding: 0;
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <canvas id="cvs" width="1920" height="1080"></canvas>
+
+        <script>
+
+            /*
+             * Sharked by Jason "--jp" Plackey
+             * jp [at] chicagowebexperts [dot] com
+             *
+             * For JS1k 2019 - X
+             * Final packed entry size is 1024b.
+             *
+             * Fish the rough waters with a couple of cold ones as you avoid the sharks.
+             * Hook a shark or run out of beer, and you're done. Up and down arrows to
+             * cast and reel in your line. Requires Unicode 9.0 (2016) support.
+             *
+             */
+
+            if (window.c === undefined) c = document.getElementById('cvs').getContext('2d'); // shimmed
+
+            var intersectRect = (r1, r2) => {
+                return !(r2.left > r1.right ||
+                    r2.right < r1.left ||
+                    r2.top > r1.bottom ||
+                    r2.bottom < r1.top);
+            }
+
+            onkeydown = onkeyup = e => { k[e.which-37] = (e.type[5]); }
+
+            c.font = '32px a';
+            c.textBaseline = 'top';
+
+            var shimHeight = 50; // 50 for js1k
+            var baseY = 600 - shimHeight;
+            var dead;
+            var lineSize = 0;
+            var k = [];
+            var f = ['🐟', '🐠', '🐡', '🦈'];
+            var fish = [];
+            var frame = 0;
+            var flux = 5;
+            var fdir = 0.02;
+            var score = 0;
+            var rising;
+            var beer = 100;
+
+            for (var idx = 0; idx < 24; idx++) {
+                fish.push({
+                    x: Math.random() * 1920,                                                         // x
+                    y: dead ? Math.random() * 1080 : 900 - shimHeight - Math.random() * 200,         // y
+                    s: Math.random() * 8 + 1,                                                        // speed
+                    i: Math.min(3, Math.random() * 10 | 0), // heavily favor sharks!                 // index
+                    //h: 0                                                                           // hooked
+                });
+            }
+
+            setInterval(function () {
+                c.fillStyle = '#ddf';
+                c.fillRect(0, 0, 1920, 1080);
+
+                c.fillStyle = c.strokeStyle = '#69c';
+
+                var y = baseY;
+
+                for (var idx = 0; idx < 1920; idx++) {
+                    c.fillRect(idx, y, 1, 1080 - y);
+                    y += Math.sin((idx + frame) / 100) / flux;
+                }
+
+                c.fillStyle = '#000';
+                c.strokeStyle = '#369';
+
+                c.beginPath();
+                for (idx = 0; idx < 1920; idx++) {
+                    c.moveTo(idx, y - 10);
+                    c.lineTo(idx, y + 10);
+                    if (idx == 1920 / 2) {
+                        var boatBottom = y - 3;
+                    }
+
+                    y += Math.sin((idx + frame) / 100) / flux;
+                }
+                c.stroke();
+
+                var center = 1920 / 2;
+
+                fish.map((v, i) => {
+                    var r1 = { left: v.x + 4, top: v.y, right: v.x + 20, bottom: v.y + 32 };
+                    var r2 = { left: center + 12, top: boatBottom + lineSize - 12, right: center + 24, bottom: boatBottom + lineSize };
+
+                    // tightened up the hit rectangles; smaller area around the hook
+                    // and only the front half of the fish.
+                    // hit windows
+                    /*
+                    c.save();
+                    c.strokeStyle = '#f00';
+                    c.rect(r1.left, r1.top, r1.right-r1.left, r1.bottom-r1.top);
+                    c.rect(r2.left, r2.top, r2.right-r2.left, r2.bottom-r2.top);
+                    c.stroke();
+                    c.restore();
+                    */
+
+                    c.fillText(f[v.i], v.x, v.y);
+
+                    if (intersectRect(r1, r2)) {
+                        if (k[38-37]) {
+                            v.s = 0;
+                            v.h = 1;
+                        }
+                    }
+
+                    v.x -= v.s;
+                    if (v.x < -64) {
+                        fish[i] = {
+                            x: Math.random() * 1920,
+                            y: dead ? Math.random() * 1080 : 900 - shimHeight - Math.random() * 200,
+                            s: Math.random() * 8 + 1,
+                            i: Math.min(3, Math.random() * 10 | 0), // heavily favor sharks!
+                            //h: 0
+                        }
+                        fish[i].x = 1920 + 64;
+                    }
+
+                    if (v.h) {
+                        v.x = dead ? 2000 : center + (i % 3);
+                        v.y = boatBottom + lineSize - 10 - (i % 6);
+                        if (v.y <= boatBottom) {
+                            if (v.i == 3) {
+                                dead = 1;
+                            } else {
+                                score++;
+                                beer += 10;
+                                fish[i] = {
+                                    x: Math.random() * 1920,
+                                    y: dead ? Math.random() * 1080 : 900 - shimHeight - Math.random() * 200,
+                                    s: Math.random() * 8 + 1,
+                                    i: Math.min(3, Math.random() * 10 | 0), // heavily favor sharks!
+                                    //h: 0
+                                }
+                                fish[i].x = 1920 + 64;
+                            }
+                        }
+                    }
+                });
+
+                if (k[40-37] && !rising) lineSize += 4; 
+                if (k[38-37] && !rising) rising = 1;
+                if (rising && lineSize > 0) lineSize -= 10;
+                if (lineSize <= 0) { lineSize = 0; rising = 0; }
+
+                frame += 10;
+                flux += fdir;
+                if (flux > 6 || flux < 2) { fdir *= -1; }
+
+                beer -= 0.05;
+                if (beer < 0) dead = 1;
+
+                if (dead) {
+                    if (baseY <= -256) {
+                        baseY = -256;
+                        ['S','H','A','R','K','E','D'].map((v, i) => {
+                            c.fillText(v, 900 + (i * 28), 450 - shimHeight + (Math.sin(i + frame / 100) * 10));
+                        });
+                    } else {
+                        baseY -= 8;
+                    }
+                } else {
+                    c.fillStyle = '#e92';
+                    c.fillRect(150, 150, (beer / 100) * 300, 36);
+                    c.fillStyle = '#000';
+                    c.fillText('🍺  BEER', 100, 150);
+                    c.fillText('⛵', 1920/2, boatBottom - 39);
+                    c.fillRect(1920 / 2 + 16, boatBottom, 3, lineSize);
+                }
+
+                c.fillText(f[1] + ' ' + score, 100, 100);
+
+            }, 16);
+
+        </script>
+
+    </body>
+</html>

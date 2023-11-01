@@ -1,0 +1,145 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+
+        <style>
+            body, html {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                padding: 0;
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <canvas id="cvs" width="1920" height="949"></canvas>
+
+        <script>
+
+            if (window.c === undefined) c = document.getElementById('cvs').getContext('2d'); // shimmed
+
+            /*
+             * Boxing 1K by Jason "--jp" Plackey
+             * jp [at] chicagowebexperts [dot] com
+             *
+             * For JS1k 2019 - X
+             * Final packed entry size is 1022b.
+             *
+             * A tribute to an Atari 2600/Activision classic: Boxing.
+             * Arrow keys move, Z and X swing.
+             *
+             * For a write up on the creation, check out:
+             * http://www.chicagowebexperts.com/js1k/the-making-of-boxing-1k.html
+             *
+             */
+
+            onkeydown = onkeyup = e => { K[e.which-37] = (e.type[5]); }
+
+            K = [];
+            P = 3.2;
+
+            W = {s:0,m:[[30,30,20,100,60],[30,30,20,100,60]],n:{},c:'#ddd',x:300,y:300}
+            B = {s:0,m:[[30,30,20,100,60],[30,30,20,100,60]],n:{},c:'#000',x:1600,y:600}
+        
+            setInterval(()=>{
+                c.lineWidth = 30;
+                c.fillStyle = '#684';
+                c.fillRect(0,0,1920,1080);
+                c.strokeStyle = '#c84';
+                c.beginPath();
+                c.rect(200,100,1920-400,1080-400);
+                c.stroke();
+
+                F=[];
+                G=[];
+                [-1,1].map((x,j)=>{
+                    [-1,1].map((y,i)=>{
+                        $=j?W:B;
+                        m=$.m[i];
+                    
+                        c.fillStyle = c.strokeStyle = $.c;
+                        c.fillText($.s,!j*1500+200,80);
+
+                        c.beginPath();
+                        c.ellipse($.x,$.y,40,40,0,-P,P); // head
+                        c.ellipse($.x+40*x,$.y,10,10,0,-P,P); // nose
+                        F.push({p:x,l:$.x+40*x,t:$.y,r:10+$.x+40*x,b:10+$.y});
+                        c.fill();
+                        
+                        c.beginPath();
+                        c.moveTo($.x,$.y-m[0]*y);
+                        c.quadraticCurveTo($.x-m[1]*x,$.y-m[3]*y, $.x-m[2]*x,$.y-m[3]*y);  // backward arc
+                        c.quadraticCurveTo($.x+m[4]*x,$.y-m[3]*y, $.x+m[4]*x,$.y-m[3]*y);  // forward reach
+                        c.stroke();
+                        
+                        c.beginPath();
+                        c.ellipse($.x+(m[4]*x),$.y-m[3]*y,30,30,0,-P,P);
+                        G.push({p:x,l:$.x+(m[4]*x),t:$.y-m[3]*y,r:30+$.x+(m[4]*x),b:30+$.y-m[3]*y});
+                        c.fill();
+
+                        if ($.n.m == i) 
+                            if ( $.n.f++ < 8) for (p in $.n.d) m[p] += $.n.d[p]*$.n.s;
+                            else
+                            if ($.n.s>0) 
+                                $.n.s = -1,
+                                $.n.f = 0;
+                            else 
+                                $.n = 0;
+                        
+                        // n.m = arm
+                        // n.f = frame
+                        // n.s = sequence/direction
+                        // n.d = deltas
+
+                    });
+                });
+                
+                if (K[0]) $.x-=4;
+                if (K[1]) $.y-=4;
+                if (K[2]) $.x+=4;
+                if (K[3]) $.y+=4;
+
+                if (K[51] && !$.n.d) $.n = {f:0,s:1,m:0,d:[-1,-6,-18,-3,18]};
+                if (K[53] && !$.n.d) $.n = {f:0,s:1,m:1,d:[-1,-6,-18,-3,18]};
+                        
+                /* diagnostic */
+                // hit boxes
+                /*c.beginPath();
+                c.save()
+                c.strokeStyle = '#f00';
+                c.lineWidth = 1;
+                F.forEach(v=>{
+                    c.rect(v.l,v.t,v.r-v.l,v.b-v.t);
+                });
+                G.forEach(v=>{
+                    c.rect(v.l,v.t,v.r-v.l,v.b-v.t);
+                });
+                c.stroke();
+                c.restore();
+                */
+
+                F.map(x=>{
+                    G.map(y=>{
+                        if (!(y.l > x.r || y.r < x.l || y.t > x.b || y.b < x.t)) 
+                            ((y.p<0)?B:W).s++,
+                            ((y.p>0)?B:W).x+=80*y.p;
+                    });
+                });
+
+                if (Math.abs(B.x-$.x)>200) B.x-=2*Math.sign(B.x-$.x+200);
+                if (Math.abs(B.y-$.y)>80) B.y-=2*Math.sign(B.y-$.y+80);
+                if (Math.random()<.1&&!B.n.d) B.n = {f:0,s:1,m:($.y-B.y<0),d:[-1,-6,-18,-3,18]};   
+
+                $.x=$.x<250?250:$.x>B.x-200?B.x-200:$.x;
+                $.y=$.y<242?242:$.y>638?638:$.y;
+                B.x=B.x<$.x+200?$.x+200:B.x>1670?1670:B.x;
+            }, 16);
+
+        </script>
+
+    </body>
+</html>

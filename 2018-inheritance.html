@@ -1,0 +1,180 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+
+        <style>
+            body, html {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                padding: 0;
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <canvas id="cvs" width="1920" height="949"></canvas>
+
+        <script>
+
+            var
+                cvs = document.getElementById("cvs"),       // shimmed
+                c = cvs.getContext("2d");                   // shimmed
+
+            /*
+             * Inheritance... by Jason "--jp" Plackey
+             * jp [at] chicagowebexperts [dot] com
+             *
+             * For JS1k 2018 - The Volatile Coin Mine
+             * Final packed entry size is 1023b.
+             *
+             * "There's gold in them thar hills!"
+             *
+             * While mining for gold coins, you've unfortunately
+             * slipped (or were you pushed?), and you're now
+             * plummeting to your death.
+             *
+             * You're gonna die, no doubt about it...  so you
+             * might as well leave your widow a sizable
+             * inheritance!  Grab as many coins as you can before
+             * you go splat.
+             * 
+             */
+
+            M = 200;
+            O = 1600;
+            N = [M];
+            P = [O];
+            $ = [0];
+            o = 1000;
+            k = [0];
+            K = 0;
+            U = 0;
+            F = 0;
+            T = 0;
+            p = 0;
+            V = 12;
+            L = 6;
+
+            function iR(M, O) {
+                return !(O.M > M.O || O.O < M.M || O.N > M.P || O.P < M.N);
+            }
+
+            function nP(c) {
+                for (i = 0; i < c; i++) {
+                    if (Math.random() < 0.01) { U = 15; }
+                    M += (Math.random() * 10) - 5 + K + U;
+                    O += (Math.random() * 10) - 5 - K - U;
+                    if (M < 200) M = 200;
+                    if (O > 1600) O = 1600;
+                    if (O > M) {
+                        N.push(M);
+                        P.push(O);
+
+                        v = Math.random() > 0.99 ? 1 : 0;
+                        if (Math.random() < 0.5) v *= -1;
+                        $.push(v);
+
+                        K += 1E-6;
+                        U = 0;
+                    }
+                }
+            }
+
+            function s(M, N) {
+                N = '';
+                M.forEach(e => { N += String.fromCharCode(e); });
+                return N;
+            }
+
+            function bmp() {
+                if (k[37]) { o -= V; }
+                if (k[39]) { o += V; }
+
+                if (o < N[200] - 8 || o > P[200] - 40) {
+                    T = 1;
+                    c.fillStyle = '#f00';
+                    clearInterval(t);
+                }
+
+                var pattern = T ? 'AAhgZhwYTgA=' : (F < 15) ? 'GBiBfhg8ZsM=' : 'GBhCfhg85wA=';
+
+                for (var y = 0; y < 12; y++) {
+                    for (var x = 0; x < 8; x++) {
+                        var ch = atob(pattern).charCodeAt(y);
+                        if (ch & (2 ** x)) {
+                            c.fillRect(o + (x * L), 200 + (y * L), L, L);
+                        }
+                    }
+                }
+
+                if (F++ == 30) { F = 0; }
+            }
+
+            onkeydown = onkeyup = e => { k[e.which] = (e.type[5]); }
+            nP(1080);
+
+            t = setInterval(e => {
+                n = c.createLinearGradient(0, 0, 0, 1080);
+                n.addColorStop(0, '#320');
+                n.addColorStop(1, '#000');
+                c.fillStyle = n;
+                c.fillRect(0, 0, 1920, 1080);
+
+                for (i = 0; i < 1080; i++) {
+                    c.beginPath();
+                    c.moveTo(N[i], i);
+                    c.lineTo(N[i + 1], i + 1)
+                    c.moveTo(P[i], i);
+                    c.lineTo(P[i + 1], i + 1)
+                    c.stroke();
+
+                    c.strokeStyle = '#000';
+                    c.beginPath();
+                    c.moveTo(N[i + 1], i);
+                    c.lineTo(P[i + 1], i + 10);
+                    c.stroke();
+                    c.strokeStyle = '#990';
+
+                    if ($[i]) {
+                        var gr = { M: o, N: 200, O: o + 48, P: 248 };
+                        if ($[i] < 0) {
+                            var cr = { M: N[i] - 8 + 50, N: i - V, O: N[i] + 16 + 50, P: i + V };
+                        } else {
+                            var cr = { M: P[i] - 8 - 50, N: i - V, O: P[i] + 16 - 50, P: i + V };
+                        }
+
+                        if (iR(gr, cr)) {
+                            $[i] = 0;
+                            p++;
+                        } else {
+                            c.fillStyle = '#ff0';
+                            c.beginPath();
+                            ($[i] < 0) ? (c.ellipse(N[i] + 50, i, 8, V, ((F * 4) % 360) * 3 / 200, 0, L)) :
+                                (c.ellipse(P[i] - 50, i, 8, V, ((F * 4) % 360) * 3 / 200, 0, L));
+
+                            c.fill();
+                        }
+                    }
+                }
+
+                c.fillStyle = '#fdb'; bmp();
+
+                c.fillStyle = '#fff';
+                c.font = '60px c';
+                c.fillText(p * 1000, 50, 200);
+
+                N = N.slice(V);
+                P = P.slice(V);
+                $ = $.slice(V);
+
+                nP(V);
+            }, 16);
+            
+        </script>
+
+    </body>
+</html>

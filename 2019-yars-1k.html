@@ -1,0 +1,199 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        
+        <style>
+            body, html {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                padding: 0;
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+    
+    <body>
+
+        <canvas id="cvs" width="1920" height="1080"></canvas>
+
+        <script>
+
+            if (window.c === undefined) c = document.getElementById('cvs').getContext('2d'); // shimmed
+
+            /*
+             * Yars 1K by Jason "--jp" Plackey
+             * jp [at] chicagowebexperts [dot] com
+             *
+             * For JS1k 2019 - X
+             * Final packed entry size is 1024b.
+             *
+             * A tribute to an Atari 2600/Activision classic: Yars' Revenge.
+             * Arrow keys move, space shoots and launches the cannon.
+             *
+             */            
+
+            onkeydown = onkeyup = e => { k[e.which] = (e.type[5]); }
+
+            var h = 1500;
+            var k = [];
+            var $ = 0;
+            var x, y;
+            var K = Array(160).fill(1);
+            var opts = { moving: 1, shifting: 1, btop: 150, bdir: 1 };
+            var P = { x: 128, y: 450, s:0 };
+            var C={};
+            var L = { x: 1800, y: 450, s:0, l:128+(Math.random()*128)|0 };
+            var T = { x: h, y: 450 };
+            
+            var fire=function() {
+                if (!(C.s&4))
+                if (!C.s &&!(P.x >= 600 && P.x <= 1000)) {C.x=P.x;C.y=P.y;C.s=5;} else C.s|=4;
+            }
+
+            var keys = function () {
+                if (k[37]) P.x -= 8;
+                if (k[38]) P.y -= 8;
+                if (k[39]) P.x += 8;
+                if (k[40]) P.y += 8;
+                if (k[32]) fire();
+
+                var row = ((P.y - opts.btop) / 40);
+                var col = ((P.x - h) / 40);
+
+                if (row > 0 && row < 16 && col > 0 && col < 10) {
+                    row = row | 0;
+                    col = col | 0;
+                        if (K[row * 10 + col]) {
+                            K[row * 10 + col] = 0;
+                            C.s=3;C.x=0;
+                            P.x -= 40;
+                            x=128;
+                        }
+                }
+            }
+
+            var drawProjectile=function() {
+                // C.s: bit 0=visible, bit 1=type (0=bullet,1=cannon), bit 2=moving
+                if (C.s&1) {
+                    if (C.s&2) {
+                        // cannon
+                        c.fillStyle = 'rgb(' + ((Math.random() * 128) | 0) + ',' + ((Math.random() * 128) | 0) + ',' + ((Math.random() * 128) | 0) + ')';
+                        c.fillRect(C.x, C.y, 64, 32);
+                        if (!(C.s&4)) C.y=P.y;
+                        else if(Math.abs(C.x-P.x)<=40 && Math.abs(C.y-P.y)<=40 ) P.s=1;
+                    } else {
+                        // bullet
+                        c.fillStyle = '#fff';
+                        c.fillRect(C.x, C.y, 4, 4);
+                    }
+                }
+                
+                if (C.s&4) {
+                    C.x += 40;
+                    if (C.x>1920) C.s=0;
+
+                    // kill a brick regardless of proj. type
+                    var row = ((C.y - opts.btop) / 40);
+                    var col = ((C.x - h) / 40);
+
+                    if (row > 0 && row < 16 && col > 0 && col < 10) {
+                        row = row | 0;
+                        col = col | 0;
+                        
+                        if (K[row * 10 + col]) {
+                            K[row * 10 + col] = 0;
+                            C.s = 0;
+                            x=128;
+                        }
+                    }
+                }
+            }
+
+            setInterval(function () {
+                if (!P.s) 
+                {
+                    c.fillStyle = '#000';
+                    c.fillRect(0, 0, 1920, 1080);
+
+                    // blockade
+                    c.fillStyle = '#932';
+                    for (i = 0; i < 160; i++) {
+                        if (K[i]) {
+                            c.fillRect(h + ((i % 10) * 40), ((i / 10) | 0) * 40 + opts.btop, 40, 40);
+                        }
+                    }
+
+                    // block opts.shifting
+                    if (opts.shifting && !($ % 4)) {
+                        K.unshift(K.pop());
+                    }
+
+                    // blockade opts.moving
+                    if (opts.moving) {
+                        opts.btop += opts.bdir;
+                        if (!L.s) L.y += opts.bdir; // move swirl with blockade
+                        if (!($%80)) opts.bdir*=-1;
+                    }
+
+                    // safezone
+                    for (y=0;y<21600;y++) {
+                        if (((Math.random() * 128) | 0)>96) {
+                            c.fillStyle = 'rgb(' + ((Math.random() * 128) | 0) + ',' + ((Math.random() * 128) | 0) + ',' + ((Math.random() * 128) | 0) + ')';
+                            c.fillRect(600+((y%40)*10), (y/200)*10, 10, 2);
+                        }
+                    }
+
+                    // tracer
+                    c.fillRect(T.x, T.y, 32, 4);
+
+                    drawProjectile();
+                    
+                    // draw swirl
+                    c.fillStyle = '#611';
+                    c.beginPath();
+                    c.ellipse(L.x, L.y, 40, 10, $ / 4, -3.2, 3.2);
+                    c.ellipse(L.x, L.y, 40, 10, $ / 2, -3.2, 3.2);
+                    c.fill();
+
+                    // drawPlayer
+                    c.fillStyle = '#88f';
+                    c.beginPath();
+                    c.ellipse(P.x, P.y, 40, 10, $ / 4, -3.2, 3.2);
+                    c.ellipse(P.x, P.y, 40, 10, -$ / 4, -3.2, 3.2);
+                    c.fill();
+                }
+
+                keys();
+                
+                // swirl movement/launch
+                
+                if (!L.s && (!--L.l)) {
+                    L.s = 1;
+                    L.dx = (L.x - P.x) / 32;
+                    L.dy = (L.y - P.y) / 32;
+                } else {
+                    if (L.s == 1) {
+                        L.x -= L.dx;
+                        L.y -= L.dy;
+                        
+                        if (L.x < 0 || L.x > 1920) {L.x=1800;L.y=450;L.s=0;L.l=128+(Math.random()*600)|0 };
+                    }
+                }
+
+                T.x -= ~~(T.x>P.x)?.5:-.5;
+                T.y -= ~~(T.y>P.y)?.5:-.5;
+
+                // collisions
+                if (Math.abs(T.x - P.x) < 16 && Math.abs(T.y - P.y) < 16 && !(P.x >= 600 && P.x <= 1000)) P.s = 1;
+                if (Math.abs(L.x - P.x) < 32 && Math.abs(L.y - P.y) < 32) P.s = 1;
+                if (Math.abs(L.x - C.x) < 32 && Math.abs(L.y - C.y) < 32 && (C.s&6)==6) P.s = 1;
+
+                $++;
+            }, 16);
+
+        </script>
+
+    </body>
+</html>

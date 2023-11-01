@@ -1,0 +1,130 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        
+        <style>
+            body, html {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                padding: 0;
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <canvas id="cvs" width="1920" height="949"></canvas>
+
+        <script>
+
+            var
+                cvs = document.getElementById("cvs"),       // shimmed
+                c = cvs.getContext("2d");                   // shimmed
+
+            /*
+             * Moneybugs by Jason "--jp" Plackey
+             * jp [at] chicagowebexperts [dot] com
+             *
+             * For JS1k 2018 - The Volatile Coin Mine
+             * Final packed entry size is 1010b.
+             *
+             * Moneybugs gather as the sun sets, but come dark,
+             * only the strongest stick around.
+             *
+             * Due to Unicode/Emoji differences cross platform,
+             * this demo is best on Windows, where the money bag
+             * has a green dollar sign $ in the center of it.
+             *
+             * Performs best on Chrome/Firefox.
+             *
+             */
+
+            function bag() {
+                c.font = '100px C';
+                c.fillText('💰', 0, 200)
+                c.strokeStyle = '#f00';
+            }
+
+            bag();
+            i = c.getImageData(0, 100, 150, 150);
+            c.fillStyle = '#fff';
+            c.fillRect(0, 0, 400, 400);
+
+            var pts = [];
+            for (var y = 0; y < 150; y++) {
+                for (var x = 0; x < 150; x++) {
+                    var o = (y * 150 * 4) + (x * 4);
+                    var r = i.data[o];
+                    var g = i.data[o + 1];
+                    var b = i.data[o + 2];
+                    var a = i.data[o + 3];
+                    if (r == 0 && g == 0 && b == 0) {
+                        r = 255; g = 255; b = 255;
+                    }
+
+                    if (a != 0) {
+                        pt = {
+                            tx: (x * 8) + 450, ty: (y * 8),
+                            cr: r, tr: (Math.random()*2)+2,
+                            cg: g, tg: (Math.random() * 2) + 2,
+                            cb: b, tb: b,
+                            ca: a, ta: a,
+                            cx: Math.random() * 1920,
+                            cy: Math.random() * 1080
+                        };
+                        pts.push(pt);
+                    }
+                }
+            }
+
+            var frame = 500;
+            var light = 0.5;
+            t = setInterval(e => {
+                fillStyle = '#000';
+                c.fillRect(0, 0, 1920, 1080);
+                grd = c.createRadialGradient(0,0,1920,1080,1920,1080);
+                grd.addColorStop(0.000, 'rgba(255, 242, 0, ' + light + ')');
+                grd.addColorStop(0.370, 'rgba(255, 157, 0, ' + light + ')');
+                grd.addColorStop(1.000, 'rgba(47, 32, 163, ' + light + ')');
+                c.fillStyle = grd;
+                c.fillRect(0, 0, 1920,1080);
+
+                var ar = pts;
+                for (var idx = 0; idx < ar.length; idx++) {
+                    c.fillStyle = 'rgba(' + ar[idx].cr + ',' + ar[idx].cg + ',' + ar[idx].cb + ',' + ar[idx].ca + ')';
+                    c.beginPath();
+                    c.strokeStyle = c.fillStyle;
+                    c.ellipse(ar[idx].cx, ar[idx].cy, ar[idx].tr, ar[idx].tg, Math.random()*360, 0, Math.PI * 2);
+                    c.fill();
+                    var step = (1000 - Math.min(frame, 980));
+                    dx = (ar[idx].tx - ar[idx].cx + (Math.random() * 200) - 100) / step;
+                    dy = (ar[idx].ty - ar[idx].cy + (Math.random() * 200) - 100) / step;
+                    da = (ar[idx].ta - ar[idx].ca) / (step/4);
+
+                    ar[idx].cx += dx;
+                    ar[idx].cy += dy;
+                    ar[idx].ca += da;
+                }
+                c.fillStyle = '#000';
+                frame += 2;
+
+                if (frame >= 1300) {
+                    light -= 0.0005;
+                    if (light < 0.2) light = 0.2;
+                    for (var a = 0; a < 20; a++) {
+                        zz = Math.round(Math.random() * pts.length);
+                        if (pts[zz].cg > (pts[zz].cr*2) ) { continue; }
+                        pts[zz].ty = window.innerHeight - 6;
+                        pts[zz].tx = pts[zz].tx + ((Math.random() * 600) - 300);
+                        pts[zz].ta = 0;
+                    }
+                }
+            }, 16);
+
+        </script>
+
+    </body>
+</html>

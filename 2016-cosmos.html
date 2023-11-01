@@ -1,0 +1,245 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+
+        <style>
+            body, html {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                padding: 0;
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+
+    <body>
+        
+        <canvas id="cvs" width="1920" height="949"></canvas>
+
+        <script>
+
+            /*
+             * Cosmos...  by Jason "--jp" Plackey
+             * jp [at] chicagowebexperts [dot] com
+             *
+             * For JS1k 2016 - Let's get eleMental!
+             * Final packed entry size is 1023b.
+             * 
+             */
+
+            var
+                cvs = document.getElementById("cvs"),       // shimmed
+                c = cvs.getContext("2d");                   // shimmed
+
+
+            function R() { return Math.random(); }
+
+            // Creates a new pixel object, which has a current point and a
+            // destination point.
+            function newEl(x, y, tx, ty) {
+                return { curX: x, curY: y, targetX: tx, targetY: ty };
+            }
+
+            function drawEl(o) {
+                c.fillRect(o.curX, o.curY, 1, 1);
+            }
+
+            function pad(s) {
+                while (s.length < 32) {
+                    s = "0" + s;
+                }
+                return s;
+            }
+
+            // Functions `u` and `pad` form the sprite unpacker.
+            function u(s) {
+                var U = s.split(',');
+                var r = "";
+                U.forEach(function (e) {
+                    r += pad(parseInt(e, 36).toString(2));
+                });
+                return r;
+            }
+
+            var
+                /*
+                * Sprites are 1-bit bitmaps that have been base-36 encoded.  Prior to the base-2 => base-36
+                * conversion, the binary strings were chunked into 32 "byte" (bit) sections, to avoid overflowing
+                * javascript's int, which would have resulted in the base-36 to base-2 conversion failing to
+                * produce the correct result.
+                *
+                *     ....####       00001111
+                *     .....##.       00000110
+                *     .....##.       00000110
+                *     .....##.  ==>  00000110  ==> 0000111100000110000001100000011001100110011001100011110000000000
+                *     .##..##.       01100110    V   
+                *     .##..##.       01100110    > 00001111000001100000011000000110,01100110011001100011110000000000    
+                *     ..####..       00111100    V 
+                *     ........       00000000    > 462DC6,SEU6TC
+                *
+                */
+                sprites = [
+                [8, 8, u('462DC6,SEU6TC')],
+                [8, 8, u('GRBJ18,3ZTX4W')],     // <==
+                [8, 8, u('6SEY3C,6OONPC')],
+                [8, 8, u('V4M88M,GPG4CG')],
+                [8, 8, u('GRAY3G,DFGH6O')],
+                [8, 8, u('GRBIPQ,WUNOXS')],     // <==  better compression was achieved repeating sprites vs. maintaining
+                [8, 8, u('6SEY3C,6OONPC')],     //      a distinct map with associate lookup code.
+                [8, 8, u('7TKL18,SEU6TC')],
+                [7, 8, u('FNQYGB,1EUTR0G')],
+                [9, 8, u('7S8B2F,1IW320O,1YHWYKG')],
+                [9, 9, u('5018XX,18M0HU0,A1L0QO')],
+                [14, 14, u('22XG1U,ULF8G,1XT97JZ,1YR4FZX,1V4BVD3,1F34NQ2,0')]
+                ],
+
+                go = 0,                 // keeps the starfield stationary for the first few seconds of the demo
+                atHomeCount = 0;        // tracks the number of pixels which have reached their destination
+
+            /*
+            * getSprite takes an input sprite and scales it by a given factor, but instead of simply fillRect'ing
+            * by the scale factor, a secondary scale factor (step) is used to create pixel elements within that
+            * rectangle at the specified interval.  For example, getSprite(s, 32, 4) would scale `s` by 32 times,
+            * but would only fill in every 4th pixel of each 32-pixel scale block.
+            *
+            * The resulting pixels are converted into 2-coordinate objects: an (x,y) of the target position of the
+            * pixel and an initially random (x,y) of the current position of the pixel.
+            */
+            function getSprite(e, scale, step) {
+                var ret = [],
+                    w = e[0],
+                    h = e[1],
+                    s = e[2];
+                x = 0,
+                y = 0;
+                for (var i = 0; i < s.length; i++) {
+                    if (s[y * w + x] == 1) {
+                        for (var y2 = y * scale; y2 < (y + 1) * scale; y2 += step) {
+                            for (x2 = x * scale; x2 < (x + 1) * scale; x2 += step) {
+                                ret.push(
+                                    newEl(
+                                    R() * 1920,
+                                    R() * 1080,
+                                    x2 + 450,
+                                    y2 + 200)
+                                );
+                            }
+                        }
+
+                    }
+                    x++;
+                    if (x == w) {
+                        x = 0;
+                        y++;
+                    }
+                }
+                return ret;
+            }
+
+            // Get the first sprite and render it in its "exploded" starfield state.
+            var idx = 0;
+            es = getSprite(sprites[idx], 32, 4);
+            es.forEach(function (e) {
+                drawEl(e);
+            });
+
+            setTimeout(function () { go = 1; }, 3000);      // keep the starfield static for a few seconds...
+
+            setInterval(function () {
+                c.fillStyle = '#333';
+                c.fillRect(0, 0, 1920, 1080);
+                c.fillStyle = "#fff";
+
+                atHomeCount = 0;                            // assume none of the pixels are at their target coordinate
+                es.forEach(function (e) {                   
+                    if (go) bringElHome(e);                 // move each pixel closer to its destination
+                    drawEl(e);                              // then draw it
+                });
+
+                if (atHomeCount == es.length) {             // if every pixel of the sprite has reached its destination,
+                    idx++;                                  // move on to the next sprite in the sequence.
+                    if (idx == sprites.length) {            // if we're past the last sprite,
+                        es.forEach(function (e) {
+                            e.targetX = R() * 1920;         // randomize each pixel position, and explode back out to the
+                            e.targetY = R() * 1080;         // starfield.
+                            atHomeCount = 0;
+                        });
+                    }
+                    else {
+                        var next_es = getSprite(sprites[idx], 32, 4);       // get the next sprite in sequence
+                        shuffle(next_es);                                   // it's imperative that we shuffle the order of
+                                                                            // subsequent sprite arrays, or the movement effect
+                                                                            // is poor, because the top left pixel of the first
+                                                                            // sprite is generally close to where the top left
+                                                                            // pixel of the second sprite is, etc.
+
+                        /*
+                        * Here's our "morphing" code.  The concept is pretty simple...
+                        * Once a sprite has been fully rendered (meaning that all of its
+                        * pixels are at their target location, the next sprite in sequence
+                        * is generated and compared to the previous sprite, leaving us in
+                        * one of two possible situations: either (a) the new sprite contains
+                        * more pixels than the prior, or (b) the new sprite contains fewer 
+                        * pixels than the prior.
+                        *
+                        * In the case of (b), we simply need to drop the extra pixels from
+                        * our first sprite.  In the case of (a), things are a bit more
+                        * complicated because our new sprite needs more pixels than we currently
+                        * have on screen.  In this case, we add extra pixels into the mix,
+                        * grabbing some of the existing sprite's pixels' coordinates as a starting
+                        * point for a seamless transition.
+                        *
+                        * Once we have our pixel array sized properly and its pixels' starting 
+                        * coodinates set, we set each pixel's target coordinate to the target
+                        * coordinate of our new sprite, and start our travel again.
+                        */
+
+                        var esl = es.length;
+                        if (next_es.length <= esl) {
+                            es.length = next_es.length;
+                        } else {
+                            for (var i = 0; i < next_es.length - esl; i++) {
+                                es.push(newEl(es[i % esl].curX, es[i % esl].curY, 0, 0));
+                            }
+                        }
+
+                        for (var z = 0; z < es.length; z++) {
+                            es[z].targetX = next_es[z].targetX;
+                            es[z].targetY = next_es[z].targetY;
+                        }
+                        atHomeCount = 0;
+                    }
+                }
+            }, 16); // 1000/60 FPS = ~16ms.
+
+            // Shuffles an array; see above for usage.
+            function shuffle(a) {
+                for (var i = a.length - 1; i > 0; i--) {
+                    var j = Math.floor(R() * (i + 1));
+                    var t = a[i];
+                    a[i] = a[j];
+                    a[j] = t;
+                }
+                return a;
+            }
+
+            // Takes a 2-coordinate pixel object and moves it one step closer
+            // to its destination.  Once the pixel has reached its destination,
+            // the "at home" counter is increased; this is used to determine
+            // when to move to the next sprite.
+            function bringElHome(o) {
+                var dx = o.targetX - o.curX;
+                var dy = o.targetY - o.curY;
+                o.curX += dx / 25;
+                o.curY += dy / 25;
+                if (dx < 1 && dy < 1) {
+                    atHomeCount++;
+                }
+            }
+
+        </script>
+
+    </body>
+</html>
